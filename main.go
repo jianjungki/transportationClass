@@ -1,68 +1,144 @@
 package main
-
 import "fmt"
-
-func main() {
-  fmt.Println("Hello World")
+var center Booking
+func main(){
+  initEntity()
+  
+  orderSequence()
+  //joinWay()
 }
 
-//OrderCenter 订单中心
-type OrderCenter struct{
-  Book BookingOperator //预定对象
-  Refund RefundOperator //退款对象
-  Info  InfoOperator //信息对象
+func initEntity(){
+  //BookingOperator
+  book := &KlookBooking{}
+  info := &KlookInfo{}
+  payment := &KlookPayment{}
+  center = NewBooking(book, info, payment)
 }
-//MerchantCenter 供应商中心
-type MerchantCenter struct{
-  Merchant MerchantOperator //供应商对象
-  MerchantName string //供应商名称
-  MerchantSystemWeight int //供应商系统权重
-  MerchantManualWeight int //供应商人工干预权重
-  MerchantServiceFee int //供应商单价
+
+func NewBooking(book BookingOperator, info InfoOperator, payment PaymentOperator) Booking{
+  return Booking{
+    Book: book,
+    Payment: payment,
+    Info: info,
+  }
 }
-//MerchantOperator 供应商操作对象
-type MerchantOperator interface{
-  PassengerVerify() //验证乘客
-  HoldSeat() //占座
-  MerchantCancel() //供应商订单取消（确认订单前）
-  ConfirmOrder() //确认订单
-  MerchantOrderDetail() //供应商订单详情
-  MerchantRefund() //供应商退款（退单）
+
+func orderSequence(){
+  hthy := MerchantCenter{
+    Entitys: []MerchantEntity{
+      NewMerchantHthy(),
+      NewMerchantCtrip(),
+    },
+    Order: &HthyOrderOperator{},
+  }
+  hthy.Search = &SearchRailChina{
+      MerchantList: hthy.Entitys,
+  }
+
+  hthy.Search.Search("深圳", "上海")
+  hthy.Search.MergeResult()
+  fmt.Println(hthy.Search.ExportResult())
+
+  center.Order.SubOrder = append(center.Order.SubOrder, center.Book.AddShoppingCar("深圳", "上海", hthy.Entitys[0]))
+  center.Book.ShowShoppingCar(center.Order)
+
+  hthy.Search.Clear()
+
+  hthy.Search.MergeResult()
+  hthy.Search.Search("上海", "北京")
+  hthy.Search.MergeResult()
+
+  fmt.Println(hthy.Search.ExportResult())
+
+  center.Order.SubOrder = append(center.Order.SubOrder, center.Book.AddShoppingCar("上海", "北京", hthy.Entitys[1]))
+  center.Book.ShowShoppingCar(center.Order)
+  fmt.Println("")
+  center.Book.ShowShoppingCarUpdate(center.Order)
+
+  center.Payment
 }
+
+func NewMerchantHthy() MerchantEntity{
+  merchant := &MerchantHthy{}
+  merchantObj := MerchantEntity{
+    Operator: merchant,
+    MerchantName: "hthy",
+    MerchantSystemWeight: 2, 
+    MerchantManualWeight: 10,
+    MerchantServiceFee: 2,
+  }
+  return merchantObj
+}
+
+func NewMerchantCtrip() MerchantEntity{
+  merchant := &MerchantHthy{}
+  merchantObj := MerchantEntity{
+    Operator: merchant,
+    MerchantName: "ctrip",
+    MerchantSystemWeight: 2, 
+    MerchantManualWeight: 10,
+    MerchantServiceFee: 2,
+  }
+  return merchantObj
+}
+
+func joinWay(){
+  j := JointWayOperator{}
+  merchant := &MerchantHthy{
+    FromStation: "深圳",
+    ToStation: "上海",
+  }
+  merchantObj := MerchantEntity{
+    Operator: merchant,
+    MerchantName: "hthy",
+    MerchantSystemWeight: 2, 
+    MerchantManualWeight: 10,
+    MerchantServiceFee: 2,
+  }
+  j.AddTrip(merchantObj)
+
+
+  merchant = &MerchantHthy{
+    FromStation: "上海",
+    ToStation: "天津",
+  }
+
+  merchantNew := MerchantEntity{
+    Operator: merchant,
+    MerchantName: "ctrip",
+    MerchantSystemWeight: 2, 
+    MerchantManualWeight: 10,
+    MerchantServiceFee: 2,
+  }
+  j.AddTrip(merchantNew)
+  j.TripMerge()
+}
+
 //JointWayOperator 联程操作对象
 type JointWayOperator struct{
-  AddTrip(MerchantCenter) //添加行程
-  TripMerge() //合并多个行程
-  Trips []MerchantCenter //多个供应商合起来的行程
+  Trips []MerchantEntity //多个供应商的行程
 }
 
-//BookingOperator 预定操作
-type BookingOperator interface{
-  AddShoppingCar() //加入购物车
-  ShowShoppingCar()  //结算购物车
-  ShowShoppingCarUpdate() //更新购物车
-  ShowOrder() //订单结算
-  ShowOrderUpdate() //更新订单结算
-  Pay() //支付
-  Cancel() //订单取消
-  Expire() //订单超时取消
-  StockOut() //出库
-}
-//RefundOperator 退款操作
-type RefundOperator interface{
-  Refund() //发起退款
-  GetDetail() //退款详情
-  Status() //退款状态
-  ManualRefund() //手动退款（特殊退款）
-}
-//InfoOperator 信息操作
-type InfoOperator interface{
-  OrderInfo() //订单详情
-  ProductInfo() //商品详情
-  PaymentInfo() //支付详情
-  RefundInfo() //退款详情
-  StockOutInfo() //出库详情
-  OperatorInfo() //操作详情
+//TripMerge 合并行程
+func (o *JointWayOperator) TripMerge() *Booking{
+  fmt.Println("\nMerge Order:")
+  for _, trip := range o.Trips{
+    fmt.Printf("%s,", trip.MerchantName + " "+ trip.Operator.MerchantOrderDetail())
+  }
+  return nil
 }
 
+//AddTrip 添加行程
+func (o *JointWayOperator) AddTrip(merchant MerchantEntity) {
+  fmt.Println("name:"+merchant.MerchantName+"\tdetail:"+ merchant.MerchantName+" "+ merchant.Operator.HoldSeat())
+  o.Trips = append(o.Trips, merchant)
+}
 
+//ExcisionOperator 拆单操作对象
+type ExcisionOperator struct{
+  FromStation string
+  ToStation string
+  TrainNo string
+  //SplitTrips []MerchantRoute
+}
