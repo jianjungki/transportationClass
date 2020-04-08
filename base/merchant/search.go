@@ -1,3 +1,4 @@
+package merchant
 import (
   "fmt"
 )

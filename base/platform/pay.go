@@ -1,4 +1,4 @@
-package main
+package platform
 //PaymentOperator 支付操作
 type PaymentOperator interface{
   Pay(string) //支付

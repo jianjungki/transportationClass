@@ -1,5 +1,6 @@
-package main
+package platform
 import (
+  "merchant"
   "fmt"
 )
 

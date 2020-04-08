@@ -1,4 +1,4 @@
-package main
+package merchant
 import "fmt"
 
 type MerchantCenter struct{

@@ -1,4 +1,4 @@
-package base
+package merchant
 import "fmt"
 type OrderOperator interface{
   Confirm()
